@@ -21,6 +21,9 @@ Route::group(['prefix'=>'admin'],function (){
 
     Route::post('/login',[AdminController::class,'login']);
     Route::post('/register',[AdminController::class,'register']);
+    Route::group(['middleware'=>['recaptcha.verify']],function (){
+        Route::post('/user-register',[UserController::class,'store']);
+    });
     Route::group(['middleware'=>['jwt.verify:admins']],function (){
         Route::post('/logout',[AdminController::class,'logout']);
         Route::apiResource('/user',UserController::class);
