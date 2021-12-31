@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use Closure;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 
@@ -17,16 +18,23 @@ class RecaptchaMiddleware
      */
     public function handle(Request $request, Closure $next)
     {
-        $recaptchaToken = $request->header('recaptchaToken');
-        $secret = env("RECAPTCHA_SECRET");
-        $response = Http::post("https://www.google.com/recaptcha/api/siteverify?secret=$secret&response=$recaptchaToken");
-        if($response['success']){
-            return $next($request);
-        }else{
+        try{
+
+            $recaptchaToken = $request->header('recaptchaToken');
+            $secret = env("RECAPTCHA_SECRET");
+            $response = Http::post("https://www.google.com/recaptcha/api/siteverify?secret=$secret&response=$recaptchaToken");
+            if($response['success']){
+                return $next($request);
+            }else{
+               throw new Exception("Incorrect please try again");
+            }
+
+        }catch(Exception $e){
             return response()->json([
                 "success"=>false,
-                "message"=>"Check if your a robot"
+                "message"=>$e->getMessage()
             ],401);
         }
+
     }
 }
