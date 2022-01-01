@@ -7,6 +7,7 @@ use App\Repository\UserRepositoryInterface;
 use http\Env\Response;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Mail;
 
 class UserController extends Controller
 {

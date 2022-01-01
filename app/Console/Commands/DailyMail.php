@@ -3,34 +3,44 @@
 namespace App\Console\Commands;
 
 use App\Models\User;
+use App\Repository\UserRepositoryInterface;
+use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Mail;
 
 class DailyMail extends Command
 {
     /**
+     * @var UserRepositoryInterface
+     */
+    private  $userRepository;
+
+
+    /**
      * The name and signature of the console command.
      *
      * @var string
      */
-    protected $signature = 'quote:mail';
+    protected $signature = 'daily:mail';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Respectively send an exclusive quote to everyone daily via email.';
+    protected $description = 'Respectively send an average registered cutomers daily via email.';
 
     /**
      * Create a new command instance.
      *
      * @return void
      */
-    public function __construct()
+    public function __construct(UserRepositoryInterface $userRepository)
     {
         parent::__construct();
+        $this->userRepository = $userRepository;
     }
+
 
     /**
      * Execute the console command.
@@ -39,29 +49,40 @@ class DailyMail extends Command
      */
     public function handle()
     {
-        $quotes = [
-            'Mahatma Gandhi' => 'Live as if you were to die tomorrow. Learn as if you were to live forever.',
-            'Friedrich Nietzsche' => 'That which does not kill us makes us stronger.',
-            'Theodore Roosevelt' => 'Do what you can, with what you have, where you are.',
-            'Oscar Wilde' => 'Be yourself; everyone else is already taken.',
-            'William Shakespeare' => 'This above all: to thine own self be true.',
-            'Napoleon Hill' => 'If you cannot do great things, do small things in a great way.',
-            'Milton Berle' => 'If opportunity doesn’t knock, build a door.'
-        ];
 
-        // Setting up a random word
-        $key = array_rand($quotes);
-        $data = $quotes[$key];
+        $date = Carbon::today();
+        $date2 = Carbon::today();
+        $date2->addHours(24);
 
-        $users = User::all();
-        foreach ($users as $user) {
-            Mail::raw("{$key} -> {$data}", function ($mail) use ($user) {
-                $mail->from('digamber@positronx.com');
-                $mail->to($user->email)
-                    ->subject('Daily New Quote!');
-            });
+        $users_nb = $this->userRepository->allUserCount();
+        $users = $this->userRepository->all();
+
+        $average_registered = 0;
+        $users_nb_per_date=0;
+
+        if($users_nb !== 0){
+         $users_nb_per_date = $this->userRepository->fetchUserPerDate($date,$date2);
+         $average_registered = round(($users_nb_per_date / $users_nb) * 100,2);
         }
 
-        $this->info('Successfully sent daily quote to everyone.');
+        foreach($users as $user){
+
+             $data = array(
+                 "total_customers"=>$users_nb,
+                 "regitered_per_day"=>$users_nb_per_date,
+                 "average_registered"=>$average_registered,
+                 "name"=>$user->name
+             );
+
+             Mail::send('email.email',$data,function ($mail) use($user) {
+                 $mail->from(env("MAIL_USERNAME"));
+                 $mail->to($user->email)
+                     ->subject('Daily average customers registered');
+             });
+
+        }
+
+
+        $this->info('Successfully sent daily average customers registered.');
     }
 }
